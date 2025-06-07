@@ -1,209 +1,167 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 7,
-   "id": "adbe1f4e-8928-4212-a0c9-af873b891d07",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import psycopg2\n",
-    "from fastapi import FastAPI\n",
-    "from typing import Optional\n",
-    "from psycopg2 import Error\n",
-    "\n",
-    "\n",
-    "#Функции для работы с БД\n",
-    "def request(id_us):\n",
-    "    try:\n",
-    "        # Подключение к существующей базе данных PostgreSQL\n",
-    "        connection = psycopg2.connect(user='postgres', password='postgres', host=\"127.0.0.1\", port=\"5432\", database=\"postgres_db\")\n",
-    "        # Курсор для выполнения операций с базой данных\n",
-    "        cursor = connection.cursor()\n",
-    "        # Выполнение SQL-запроса\n",
-    "        cursor.execute(\"SELECT id, subscribe FROM users WHERE id = \" + id_us)\n",
-    "        # Получить результат\n",
-    "        record = cursor.fetchone()\n",
-    "    except (Exception, Error) as error:\n",
-    "        return (\"Ошибка при работе с PostgreSQL\" + str(error))\n",
-    "    finally:\n",
-    "        if connection:\n",
-    "            cursor.close()\n",
-    "            connection.close()\n",
-    "            return record[1]\n",
-    "            \n",
-    "def adding(id_us):\n",
-    "    try:\n",
-    "        # Подключение к существующей базе данных PostgreSQL\n",
-    "        connection = psycopg2.connect(user='postgres', password='postgres', host=\"127.0.0.1\", port=\"5432\", database=\"postgres_db\")\n",
-    "        # Курсор для выполнения операций с базой данных\n",
-    "        cursor = connection.cursor()\n",
-    "        # Выполнение SQL-запроса\n",
-    "        cursor.execute(\"INSERT INTO users (id, subscribe) VALUES (\" + id_us + \", True)\")\n",
-    "        connection.commit()\n",
-    "    except (Exception, Error) as error:\n",
-    "        return (\"Ошибка при работе с PostgreSQL\" + str(error))\n",
-    "    finally:\n",
-    "        if connection:\n",
-    "            cursor.close()\n",
-    "            connection.close()\n",
-    "            \n",
-    "def update(id_us, flag):\n",
-    "    try:\n",
-    "        # Подключение к существующей базе данных PostgreSQL\n",
-    "        connection = psycopg2.connect(user='postgres', password='postgres', host=\"127.0.0.1\", port=\"5432\", database=\"postgres_db\")\n",
-    "        # Курсор для выполнения операций с базой данных\n",
-    "        cursor = connection.cursor()\n",
-    "        # Выполнение SQL-запроса\n",
-    "        cursor.execute(\"UPDATE users SET subscribe = \" + str(flag) + \" WHERE id = \" + id_us)\n",
-    "        connection.commit()\n",
-    "    except (Exception, Error) as error:\n",
-    "        return (\"Ошибка при работе с PostgreSQL\" + str(error))\n",
-    "    finally:\n",
-    "        if connection:\n",
-    "            cursor.close()\n",
-    "            connection.close()\n",
-    "            \n",
-    "#Словарь со всеми символами чисел\n",
-    "cifr = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};   \n",
-    "\n",
-    "#Функции для работы с запросами от клиентов\n",
-    "app = FastAPI();\n",
-    "@app.get(\"/\")\n",
-    "#обрабатываем get запросы\n",
-    "def get_all(id_us: Optional[int] = None):\n",
-    "    #обрабатываем пустой запрос\n",
-    "    if (id_us == None):\n",
-    "        return 'Уточните свой запрос'\n",
-    "    #обрабатываем запрос с одним id\n",
-    "    elif (not(',' in id_us)):\n",
-    "        idd = '';\n",
-    "        for i in range(len(id_us)):\n",
-    "            if (id_us[i] in cifr):\n",
-    "                idd += id_us[i]\n",
-    "        return request(idd);\n",
-    "    #обрабатываем запрос с множеством id\n",
-    "    else:\n",
-    "        dictt = dict();\n",
-    "        i = 0;\n",
-    "        store_id = '' + id_us;\n",
-    "        while(store_id != ''):\n",
-    "            idd = '';\n",
-    "            while((store_id[i] != ',') and (i < len(store_id))):\n",
-    "                if (store_id[i] in cifr):\n",
-    "                    idd += store_id[i];\n",
-    "                i += 1;\n",
-    "            if (store_id[i] == ','):\n",
-    "                store_id = store_id[(i+1):];\n",
-    "            else:\n",
-    "                store_id = '';\n",
-    "            i = 0;\n",
-    "            dictt[idd] = request(idd);\n",
-    "        return dictt\n",
-    "\n",
-    "@app.post(\"/\")\n",
-    "def post_all(id_us: Optional[int] = None):\n",
-    "    #обрабатываем пустой запрос\n",
-    "    if (id_us == None):\n",
-    "        return 'Уточните свой запрос'\n",
-    "    #обрабатываем запрос с одним id\n",
-    "    elif (not(',' in id_us)):\n",
-    "        idd = '';\n",
-    "        for i in range(len(id_us)):\n",
-    "            if (id_us[i] in cifr):\n",
-    "                idd += id_us[i]\n",
-    "        adding(idd);\n",
-    "    #обрабатываем запрос с множеством id\n",
-    "    else:\n",
-    "        listt = [];\n",
-    "        i = 0;\n",
-    "        store_id = '' + id_us;\n",
-    "        while(store_id != ''):\n",
-    "            idd = '';\n",
-    "            while((store_id[i] != ',') and (i < len(store_id))):\n",
-    "                if (store_id[i] in cifr):\n",
-    "                    idd += store_id[i];\n",
-    "                i += 1;\n",
-    "            if (store_id[i] == ','):\n",
-    "                store_id = store_id[(i+1):];\n",
-    "            else:\n",
-    "                store_id = '';\n",
-    "            i = 0;\n",
-    "            listt.append(idd);\n",
-    "        for i in listt:\n",
-    "            adding(i);\n",
-    "@app.patch(\"/\")\n",
-    "def patch_id(flag: str, id_us: Optional[int] = None):\n",
-    "     #обрабатываем пустой запрос\n",
-    "    if (id_us == None):\n",
-    "        return 'Уточните свой запрос'\n",
-    "    #обрабатываем запрос с одним id\n",
-    "    elif (not(',' in id_us)):\n",
-    "        idd = '';\n",
-    "        for i in range(len(id_us)):\n",
-    "            if (id_us[i] in cifr):\n",
-    "                idd += id_us[i]\n",
-    "        if (\"True\" in flag):\n",
-    "            update(idd, \"True\");\n",
-    "        else:\n",
-    "            update(idd, \"False\");\n",
-    "    #обрабатываем запрос с множеством id\n",
-    "    else:\n",
-    "        dictt = dict();\n",
-    "        i = 0;\n",
-    "        store_id = '' + id_us;\n",
-    "        list_flag = flag.split(',')\n",
-    "        ii = 0;\n",
-    "        while(store_id != ''):\n",
-    "            idd = '';\n",
-    "            while((store_id[i] != ',') and (i < len(store_id))):\n",
-    "                if (store_id[i] in cifr):\n",
-    "                    idd += store_id[i];\n",
-    "                i += 1;\n",
-    "            if (store_id[i] == ','):\n",
-    "                store_id = store_id[(i+1):];\n",
-    "            else:\n",
-    "                store_id = '';\n",
-    "            i = 0;\n",
-    "            if (\"True\" in list_flag[ii]):\n",
-    "                dictt[idd] = True;\n",
-    "            elif (\"False\" in list_flag[ii]):\n",
-    "                dict[idd] = False;\n",
-    "            else:\n",
-    "                return 'У элемента под номером ' + str(ii+1) + ' присвоен ошибочный флаг'\n",
-    "            ii += 1;\n",
-    "        for reg_flag in dictt:\n",
-    "            update(reg_flag, dictt[reg_flag])"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "e6915c82-e753-4621-9881-7aef01556271",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python [conda env:base] *",
-   "language": "python",
-   "name": "conda-base-py"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.12.7"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+import psycopg2
+from fastapi import FastAPI
+from typing import Optional
+from psycopg2 import Error
+
+
+#Функции для работы с БД
+def request(id_us):
+    try:
+        # Подключение к существующей базе данных PostgreSQL
+        connection = psycopg2.connect(user='postgres', password='postgres', host="127.0.0.1", port="5432", database="postgres_db")
+        # Курсор для выполнения операций с базой данных
+        cursor = connection.cursor()
+        # Выполнение SQL-запроса
+        cursor.execute("SELECT id, subscribe FROM users WHERE id = " + id_us)
+        # Получить результат
+        record = cursor.fetchone()
+    except (Exception, Error) as error:
+        return ("Ошибка при работе с PostgreSQL" + str(error))
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            return record[1]
+            
+def adding(id_us):
+    try:
+        # Подключение к существующей базе данных PostgreSQL
+        connection = psycopg2.connect(user='postgres', password='postgres', host="127.0.0.1", port="5432", database="postgres_db")
+        # Курсор для выполнения операций с базой данных
+        cursor = connection.cursor()
+        # Выполнение SQL-запроса
+        cursor.execute("INSERT INTO users (id, subscribe) VALUES (" + id_us + ", True)")
+        connection.commit()
+    except (Exception, Error) as error:
+        return ("Ошибка при работе с PostgreSQL" + str(error))
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            
+def update(id_us, flag):
+    try:
+        # Подключение к существующей базе данных PostgreSQL
+        connection = psycopg2.connect(user='postgres', password='postgres', host="127.0.0.1", port="5432", database="postgres_db")
+        # Курсор для выполнения операций с базой данных
+        cursor = connection.cursor()
+        # Выполнение SQL-запроса
+        cursor.execute("UPDATE users SET subscribe = " + str(flag) + " WHERE id = " + id_us)
+        connection.commit()
+    except (Exception, Error) as error:
+        return ("Ошибка при работе с PostgreSQL" + str(error))
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            
+#Словарь со всеми символами чисел
+cifr = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};   
+
+#Функции для работы с запросами от клиентов
+app = FastAPI();
+@app.get("/")
+#обрабатываем get запросы
+def get_all(id_us: Optional[int] = None):
+    #обрабатываем пустой запрос
+    if (id_us == None):
+        return 'Уточните свой запрос'
+    #обрабатываем запрос с одним id
+    elif (not(',' in id_us)):
+        idd = '';
+        for i in range(len(id_us)):
+            if (id_us[i] in cifr):
+                idd += id_us[i]
+        return request(idd);
+    #обрабатываем запрос с множеством id
+    else:
+        dictt = dict();
+        i = 0;
+        store_id = '' + id_us;
+        while(store_id != ''):
+            idd = '';
+            while((store_id[i] != ',') and (i < len(store_id))):
+                if (store_id[i] in cifr):
+                    idd += store_id[i];
+                i += 1;
+            if (store_id[i] == ','):
+                store_id = store_id[(i+1):];
+            else:
+                store_id = '';
+            i = 0;
+            dictt[idd] = request(idd);
+        return dictt
+
+@app.post("/")
+def post_all(id_us: Optional[int] = None):
+    #обрабатываем пустой запрос
+    if (id_us == None):
+        return 'Уточните свой запрос'
+    #обрабатываем запрос с одним id
+    elif (not(',' in id_us)):
+        idd = '';
+        for i in range(len(id_us)):
+            if (id_us[i] in cifr):
+                idd += id_us[i]
+        adding(idd);
+    #обрабатываем запрос с множеством id
+    else:
+        listt = [];
+        i = 0;
+        store_id = '' + id_us;
+        while(store_id != ''):
+            idd = '';
+            while((store_id[i] != ',') and (i < len(store_id))):
+                if (store_id[i] in cifr):
+                    idd += store_id[i];
+                i += 1;
+            if (store_id[i] == ','):
+                store_id = store_id[(i+1):];
+            else:
+                store_id = '';
+            i = 0;
+            listt.append(idd);
+        for i in listt:
+            adding(i);
+@app.patch("/")
+def patch_id(flag: str, id_us: Optional[int] = None):
+     #обрабатываем пустой запрос
+    if (id_us == None):
+        return 'Уточните свой запрос'
+    #обрабатываем запрос с одним id
+    elif (not(',' in id_us)):
+        idd = '';
+        for i in range(len(id_us)):
+            if (id_us[i] in cifr):
+                idd += id_us[i]
+        if ("True" in flag):
+            update(idd, "True");
+        else:
+            update(idd, "False");
+    #обрабатываем запрос с множеством id
+    else:
+        dictt = dict();
+        i = 0;
+        store_id = '' + id_us;
+        list_flag = flag.split(',')
+        ii = 0;
+        while(store_id != ''):
+            idd = '';
+            while((store_id[i] != ',') and (i < len(store_id))):
+                if (store_id[i] in cifr):
+                    idd += store_id[i];
+                i += 1;
+            if (store_id[i] == ','):
+                store_id = store_id[(i+1):];
+            else:
+                store_id = '';
+            i = 0;
+            if ("True" in list_flag[ii]):
+                dictt[idd] = True;
+            elif ("False" in list_flag[ii]):
+                dict[idd] = False;
+            else:
+                return 'У элемента под номером ' + str(ii+1) + ' присвоен ошибочный флаг'
+            ii += 1;
+        for reg_flag in dictt:
+            update(reg_flag, dictt[reg_flag])
