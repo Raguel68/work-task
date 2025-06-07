@@ -2,17 +2,24 @@ version: '3.8'
 
 services:
   postgres:
-    container_name: postgres
-    image: "postgres:latest"
+    image: postgres:latest
     environment:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      POSTGRES_DB: "test"	
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres_db
     volumes:
-       - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
-       - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
-valumes:
-    postgres_data
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
